@@ -1,0 +1,33 @@
+library("ncdf4")
+TES200605<-nc_open("TES200605.nc")
+lon0605<-ncvar_get(TES200605,TES200605$var$Longitude)
+lat0605<-ncvar_get(TES200605,TES200605$var$Latitude)
+time0605<-ncvar_get(TES200605,TES200605$var$YYYYMMDD)
+SRQ<-ncvar_get(TES200605,TES200605$var$SpeciesRetrievalQuality)
+DOFS<-ncvar_get(TES200605,TES200605$var$DegreesOfFreedomForSignal)
+AKD<-ncvar_get(TES200605,TES200605$var$`Characterization/AveragingKernelDiagonal`)
+P<-ncvar_get(TES200605,TES200605$var$Pressure)
+HDO_H2O0605<-ncvar_get(TES200605,TES200605$var$`Retrieval/HDO_H2O`)
+p<-matrix(nrow = 63434,ncol = 5)
+delta<-matrix(nrow = 63434,ncol = 5)
+ak<-matrix(nrow = 63434,ncol = 5)
+HDO<-matrix(nrow = 63434,ncol = 5)
+H2O<-matrix(nrow = 63434,ncol = 5)
+a<-matrix(nrow = 63434,ncol = 5)
+HDOcorrect<-matrix(nrow = 63434,ncol = 5)
+D<-matrix(nrow = 63434,ncol = 5)
+for (i in 1:5) {
+p[,i]<-t(t(P[i+3,1:63434]))
+delta[,i]<-0.00019*(p[,i])-0.067
+ak[,i]<-t(t(AKD[i+3,1:63434]))
+HDO[,i]<-t(t(HDO_H2O0605[i+3,1:63434]))
+H2O[,i]<-t(t(HDO_H2O0605[i+20,1:63434]))
+a[,i]<-log(HDO[,i])-(ak[,i])*(delta[,i])
+HDOcorrect[,i]<-exp(a[,i])
+D[,i]<-(((HDOcorrect[,i])*10000)/((H2O[,i])*3.1152)-1)*1000}
+qD<-matrix(nrow = 5,ncol = 63434)
+q<-colSums(HDO_H2O0605[21:25,1:63434])
+for (i in 1:5) {qD[i,]<-HDO_H2O0605[i+20,1:63434]*D[1:63434,i]}
+Davg<-colSums(qD[1:5,1:63434])/q
+data200605<-data.frame(lon0605,lat0605,time0605,SRQ,DOFS,Davg)
+write.csv(data200605,"TES200605.csv")
